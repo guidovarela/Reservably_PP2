@@ -1,0 +1,173 @@
+{
+  "info": {
+    "_postman_id": "14979cf2-e5b5-4f56-96ef-bb269e614b74",
+    "name": "Barbería PP2 - Revisión 1",
+    "description": "CRUD de usuarios y servicios, más consulta y reserva simple de turnos.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{apiToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "apiToken", "value": "" },
+    { "key": "clientId", "value": "" },
+    { "key": "barberId", "value": "" },
+    { "key": "serviceId", "value": "" },
+    { "key": "appointmentId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Usuarios",
+      "item": [
+        {
+          "name": "Listar usuarios",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/users" }
+        },
+        {
+          "name": "Crear cliente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) pm.collectionVariables.set('clientId', pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Cliente de prueba\",\n  \"email\": \"cliente@example.com\",\n  \"phone\": \"1112345678\",\n  \"role\": \"client\"\n}"
+            },
+            "url": "{{baseUrl}}/api/users"
+          }
+        },
+        {
+          "name": "Crear barbero",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) pm.collectionVariables.set('barberId', pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Barbero de prueba\",\n  \"email\": \"barbero@example.com\",\n  \"role\": \"staff\"\n}"
+            },
+            "url": "{{baseUrl}}/api/users"
+          }
+        },
+        {
+          "name": "Actualizar usuario (reemplazar :id)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"phone\": \"1199999999\"\n}" },
+            "url": "{{baseUrl}}/api/users/{{clientId}}"
+          }
+        },
+        {
+          "name": "Eliminar usuario (reemplazar :id)",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/api/users/{{clientId}}" }
+        }
+      ]
+    },
+    {
+      "name": "Servicios",
+      "item": [
+        {
+          "name": "Listar servicios",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/services" }
+        },
+        {
+          "name": "Crear servicio",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) pm.collectionVariables.set('serviceId', pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Corte clásico\",\n  \"description\": \"Corte de cabello\",\n  \"price\": 5000,\n  \"duration_minutes\": 30\n}"
+            },
+            "url": "{{baseUrl}}/api/services"
+          }
+        },
+        {
+          "name": "Actualizar servicio (reemplazar :id)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"price\": 5500\n}" },
+            "url": "{{baseUrl}}/api/services/{{serviceId}}"
+          }
+        },
+        {
+          "name": "Eliminar servicio (reemplazar :id)",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/api/services/{{serviceId}}" }
+        }
+      ]
+    },
+    {
+      "name": "Turnos",
+      "item": [
+        {
+          "name": "Listar turnos",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/appointments" }
+        },
+        {
+          "name": "Reservar turno",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) pm.collectionVariables.set('appointmentId', pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_id\": \"{{clientId}}\",\n  \"barber_id\": \"{{barberId}}\",\n  \"service_id\": \"{{serviceId}}\",\n  \"starts_at\": \"2026-10-21T14:00:00-03:00\"\n}"
+            },
+            "url": "{{baseUrl}}/api/appointments"
+          }
+        }
+      ]
+    }
+  ]
+}

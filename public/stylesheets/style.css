@@ -1,56 +1,5 @@
 body {
-  padding: 50px;
-  font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
-}
-
-a {
-  color: #00B7FF;
-}
-
-.site-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 16px 20px;
-  border-bottom: 1px solid #ddd;
-}
-
-.site-brand {
-  color: inherit;
-  font-size: 1.5rem;
-  font-weight: 700;
-  text-decoration: none;
-}
-
-.social-links {
-  display: flex;
-  gap: 16px;
-}
-
-@media (max-width: 480px) {
-  .site-header {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 12px;
-  }
-}
-
-.supabase-status {
-  margin-top: 32px;
-}
-
-.connection-ok {
-  color: #176b35;
-}
-
-.connection-error {
-  color: #a12622;
-}
-
-.supabase-status pre {
-  overflow-x: auto;
-  padding: 16px;
-  background: #f4f4f4;
-  border-radius: 4px;
+  margin: 0;
+  background: #fafaf9;
+  font-family: Arial, Helvetica, sans-serif;
 }
