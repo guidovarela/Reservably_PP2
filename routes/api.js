@@ -1,64 +1,13 @@
-const crypto = require('crypto');
 const express = require('express');
-const { getSupabase } = require('../lib/supabase');
+const { getSupabase } = require('../config/supabase');
+const { requireApiToken } = require('../middlewares/auth.middleware');
+const { isUuid, validateId, respondWithValidation } = require('../middlewares/validate.middleware');
+const { sendDatabaseError, asyncRoute, apiErrorHandler } = require('../middlewares/error.middleware');
 
 const router = express.Router();
 const userRoles = ['client', 'staff', 'admin'];
-const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-function requireApiToken(req, res, next) {
-  const expected = process.env.API_TOKEN;
-  const provided = req.get('authorization') || '';
-  const match = /^Bearer (.+)$/i.exec(provided);
-
-  if (!expected) {
-    return res.status(503).json({ error: 'La API no está configurada: falta API_TOKEN.' });
-  }
-  if (!match) {
-    return res.status(401).json({ error: 'Se requiere Authorization: Bearer <API_TOKEN>.' });
-  }
-
-  const expectedBuffer = Buffer.from(expected);
-  const providedBuffer = Buffer.from(match[1]);
-  if (expectedBuffer.length !== providedBuffer.length ||
-      !crypto.timingSafeEqual(expectedBuffer, providedBuffer)) {
-    return res.status(401).json({ error: 'Token de acceso inválido.' });
-  }
-
-  next();
-}
 
 router.use(requireApiToken);
-
-function sendDatabaseError(res, error) {
-  if (error.code === '23P01') {
-    return res.status(409).json({ error: 'El barbero o el cliente ya tiene un turno en ese horario.' });
-  }
-  if (error.code === '23505') {
-    return res.status(409).json({ error: 'Ya existe un registro con esos datos únicos.' });
-  }
-  if (error.code === '23503') {
-    return res.status(400).json({ error: 'Una referencia indicada no existe o no puede eliminarse.' });
-  }
-
-  console.error('Error de Supabase:', error);
-  return res.status(500).json({ error: 'No se pudo completar la operación en Supabase.' });
-}
-
-function asyncRoute(handler) {
-  return (req, res, next) => Promise.resolve(handler(req, res, next)).catch(next);
-}
-
-function isUuid(value) {
-  return typeof value === 'string' && uuidPattern.test(value);
-}
-
-function validateId(req, res, next) {
-  if (!isUuid(req.params.id)) {
-    return res.status(400).json({ error: 'El id debe ser un UUID válido.' });
-  }
-  next();
-}
 
 function validateUser(body, partial = false) {
   const errors = [];
@@ -136,11 +85,6 @@ function validateService(body, partial = false) {
   return errors;
 }
 
-function respondWithValidation(res, errors) {
-  if (!errors.length) return false;
-  res.status(400).json({ error: 'Datos inválidos.', details: errors });
-  return true;
-}
 
 function cleanInput(body, fields) {
   const input = {};
@@ -283,12 +227,6 @@ router.post('/appointments', asyncRoute(async (req, res) => {
   res.status(201).json(data);
 }));
 
-router.use((error, req, res, next) => {
-  if (error.status) {
-    return res.status(error.status).json({ error: error.message });
-  }
-  console.error('Error inesperado en la API:', error);
-  res.status(500).json({ error: 'Error interno del servidor.' });
-});
+router.use(apiErrorHandler);
 
 module.exports = router;

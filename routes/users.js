@@ -1,18 +1,15 @@
 const express = require('express');
-const { getSupabase, getSupabaseAuth } = require('../lib/supabase');
+const { getSupabase, getSupabaseAuth } = require('../config/supabase');
+const {
+  SESSION_COOKIE_NAME: sessionCookie,
+  getAdminProfile,
+  clearAdminCookie
+} = require('../middlewares/auth.middleware');
+const { emailPattern, uuidPattern } = require('../middlewares/validate.middleware');
+const { databaseErrorMessage, asyncRoute } = require('../middlewares/error.middleware');
 
 const router = express.Router();
-const sessionCookie = 'barberia_admin_session';
 const userRoles = ['client', 'staff', 'admin'];
-const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-function asyncRoute(handler) {
-  return (req, res, next) => Promise.resolve(handler(req, res, next)).catch((error) => {
-    console.error('Error en la gestión de usuarios:', error);
-    next(error);
-  });
-}
 
 function renderPage(res, options = {}) {
   res.status(options.status || 200).render('users', {
@@ -26,26 +23,6 @@ function renderPage(res, options = {}) {
   });
 }
 
-async function getAdminProfile(accessToken) {
-  if (!accessToken) return null;
-
-  const { data, error } = await getSupabaseAuth().auth.getUser(accessToken);
-  if (error) {
-    if ([400, 401, 403].includes(error.status)) return null;
-    throw error;
-  }
-  if (!data.user || !data.user.email) return null;
-
-  const { data: profile, error: profileError } = await getSupabase()
-    .from('users')
-    .select('id, full_name, email, role')
-    .eq('email', data.user.email.toLowerCase())
-    .maybeSingle();
-  if (profileError) throw profileError;
-
-  return profile && profile.role === 'admin' ? profile : null;
-}
-
 async function loadUsers() {
   const { data, error } = await getSupabase()
     .from('users')
@@ -53,15 +30,6 @@ async function loadUsers() {
     .order('created_at', { ascending: false });
   if (error) throw error;
   return data;
-}
-
-function clearAdminCookie(res) {
-  res.clearCookie(sessionCookie, {
-    httpOnly: true,
-    sameSite: 'strict',
-    secure: process.env.NODE_ENV === 'production',
-    path: '/users'
-  });
 }
 
 function getUserInput(body) {
@@ -84,11 +52,6 @@ function getUserInput(body) {
   };
 }
 
-function databaseErrorMessage(error) {
-  if (error.code === '23505') return 'Ya existe un usuario registrado con ese email.';
-  if (error.code === '23503') return 'No se puede eliminar este usuario porque tiene turnos asociados.';
-  return 'No se pudo completar la operación en Supabase.';
-}
 
 router.get('/', asyncRoute(async (req, res) => {
   const admin = await getAdminProfile(req.cookies[sessionCookie]);
