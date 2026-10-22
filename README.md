@@ -4,16 +4,20 @@ Aplicación web para administrar los servicios, el equipo y los turnos de una ba
 
 ## Arquitectura
 
+El backend implementa una **Arquitectura en Capas (Layered Architecture)** organizada en **Routes -> Middlewares -> Controllers -> Services -> Repositories**:
+
 ```mermaid
-flowchart LR
-    Browser[Navegador] -->|HTML y formularios| Express[Node.js + Express]
-    Express -->|Renderizado| EJS[Vistas EJS + Tailwind CSS]
-    Express -->|supabase-js| SupabaseAuth[Supabase Auth]
-    Express -->|supabase-js / PostgREST| Postgres[(PostgreSQL en Supabase)]
-    API[Cliente API / Postman] -->|REST + API_TOKEN| Express
+flowchart TD
+    Client[Cliente / Navegador / API] --> Routes[Rutas Express]
+    Routes --> Middlewares[Middlewares: Auth, Validación, Error Handling]
+    Middlewares --> Controllers[Controladores: req / res / HTTP status]
+    Controllers --> Services[Servicios: Lógica de Negocio y Reglas de Dominio]
+    Services --> Repositories[Repositorios: Acceso a Datos]
+    Repositories --> Supabase[(PostgreSQL en Supabase)]
+    Controllers -->|Renderizado SSR| Views[Vistas EJS + Tailwind CSS]
 ```
 
-La aplicación es renderizada en el servidor: no hay una SPA ni un servicio frontend independiente. El diagrama de datos del proyecto está en [`DATABASE-DIAGRAM.md`](./DATABASE-DIAGRAM.md).
+La aplicación combina endpoints de API REST para operaciones programáticas con renderizado en el servidor (SSR) mediante plantillas EJS para el panel de administración. El diagrama de datos del proyecto está en [`DATABASE-DIAGRAM.md`](./DATABASE-DIAGRAM.md).
 
 ## Tecnologías utilizadas
 
@@ -146,39 +150,63 @@ El alta desde este panel crea el perfil en `public.users`, pero no crea una cuen
 
 ```text
 .
-├── app.js                         # Configuración y middleware de Express
+├── app.js                         # Configuración y middleware global de Express
 ├── bin/
 │   └── www                        # Inicio del servidor HTTP
+├── config/
+│   └── supabase.js                # Inicialización y clientes de Supabase
+├── controllers/                   # Controladores (manejo de req, res y códigos HTTP)
+│   ├── appointments.controller.js
+│   ├── services.controller.js
+│   └── users.controller.js
 ├── lib/
-│   └── supabase.js                # Clientes de Supabase para base de datos y Auth
-├── routes/
-│   ├── api.js                     # API REST de usuarios, servicios y turnos
-│   ├── index.js                   # Página principal
-│   └── users.js                   # Panel web y sesión de administración
-├── views/
-│   ├── index.ejs                  # Página pública
-│   ├── users.ejs                  # Gestión de usuarios
-│   └── partials/                  # Elementos compartidos de las vistas
-├── public/
-│   ├── images/                    # Recursos gráficos
-│   ├── javascripts/               # Scripts del navegador
-│   └── stylesheets/               # Estilos propios
+│   └── supabase.js                # Wrapper de retrocompatibilidad con config/supabase
+├── middlewares/                   # Middlewares reutilizables
+│   ├── auth.middleware.js         # API token y sesión de administración
+│   ├── error.middleware.js        # Manejo centralizado de errores y códigos Postgres
+│   └── validate.middleware.js     # Validadores de UUID, email y formato
+├── repositories/                  # Capa de acceso a datos (queries a Supabase)
+│   ├── appointments.repository.js
+│   ├── services.repository.js
+│   └── users.repository.js
+├── routes/                        # Enrutadores delgados y declarativos
+│   ├── api.js                     # Endpoints de la API REST
+│   ├── index.js                   # Ruta pública principal
+│   └── users.js                   # Rutas del panel web de usuarios
+├── services/                      # Capa de negocio (lógica de dominio y reglas)
+│   ├── appointments.service.js
+│   ├── services.service.js
+│   └── users.service.js
+├── validators/                    # Validadores de esquemas y sanitización
+│   ├── appointment.validator.js
+│   ├── service.validator.js
+│   └── user.validator.js
+├── views/                         # Plantillas EJS para renderizado del servidor
+│   ├── index.ejs
+│   ├── users.ejs
+│   └── partials/
+├── public/                        # Recursos estáticos
 ├── supabase/
-│   └── schema.sql                 # Esquema de la base remota
-├── postman/                       # Colección de solicitudes de la API
-├── test/                          # Pruebas automatizadas
-├── .env.example                   # Plantilla de configuración local
-└── package.json                  # Dependencias y scripts npm
+│   └── schema.sql                 # Esquema DDL de PostgreSQL en Supabase
+├── postman/                       # Colección Postman de la API
+├── test/                          # Pruebas automatizadas (unitarias y de integración)
+│   ├── api.test.js
+│   └── appointments.service.test.js
+├── .env.example
+└── package.json
 ```
 
 ## Decisiones de diseño y buenas prácticas
 
+- **Arquitectura en Capas y Desacoplamiento:** Clara separación de responsabilidades entre enrutamiento, controladores HTTP, servicios de dominio y repositorios de datos.
+- **Inyección de Dependencias para Testing:** Los servicios aceptan dependencias inyectables en sus constructores, permitiendo tests unitarios aislados con mocks sin necesidad de conexión activa a Supabase.
 - **Persistencia remota:** PostgreSQL de Supabase es la fuente de datos. El acceso se hace desde el backend mediante `@supabase/supabase-js`; no hay base local ni ORM.
 - **Separación entre API y panel:** `/api` entrega JSON y exige `API_TOKEN`; `/users` sirve formularios HTML y requiere una sesión administrativa de Supabase Auth para operar.
 - **Sesión protegida:** el token de acceso de Supabase Auth se guarda en una cookie `HttpOnly`, con `SameSite=Strict` y `Secure` en producción. La clave secreta de la base permanece en el servidor.
-- **Validación:** los endpoints REST validan campos, roles, UUID y fechas; el panel web valida los datos de usuario antes de escribir.
-- **Errores:** la API devuelve JSON con códigos HTTP apropiados; los conflictos de unicidad y solapamiento se reportan como conflictos y las referencias inválidas se traducen a errores controlados.
+- **Validación modular:** Validadores independientes (`validators/`) verifican tipos, fechas ISO 8601, roles y UUIDs antes de que las peticiones lleguen a la capa de datos.
+- **Errores:** la API devuelve JSON con códigos HTTP apropiados; los conflictos de unicidad y solapamiento se reportan como conflictos y las referencias inválidas se traducen a errores controlados en `middlewares/error.middleware.js`.
 - **Integridad y concurrencia:** restricciones de PostgreSQL aseguran emails únicos y evitan solapamientos incluso ante reservas concurrentes. Las relaciones de turnos impiden borrar registros referenciados.
+- **Verificación continua:** La suite completa de pruebas unitarias y de integración se ejecuta con `npm test` (`node:test`).
 - **Sin herramientas no configuradas:** el repositorio no define linter ni servicio de despliegue. Las verificaciones disponibles son `npm test`.
 
 ## Recursos

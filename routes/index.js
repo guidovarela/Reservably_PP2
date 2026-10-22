@@ -1,5 +1,6 @@
 const express = require('express');
-const { getSupabase } = require('../config/supabase');
+const servicesService = require('../services/services.service');
+const usersService = require('../services/users.service');
 
 const router = express.Router();
 
@@ -7,17 +8,10 @@ router.get('/', async (req, res) => {
   const title = 'Sistema de Turnos';
 
   try {
-    const supabase = getSupabase();
-    const [{ data: services, error: servicesError }, { data: staff, error: staffError }] =
-      await Promise.all([
-        supabase.from('services').select('id, name, description, price, duration_minutes')
-          .eq('active', true).order('name'),
-        supabase.from('users').select('id, full_name')
-          .eq('role', 'staff').order('full_name')
-      ]);
-
-    if (servicesError) throw servicesError;
-    if (staffError) throw staffError;
+    const [services, staff] = await Promise.all([
+      servicesService.getActiveServices(),
+      usersService.getStaffUsers()
+    ]);
 
     res.render('index', {
       title,
