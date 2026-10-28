@@ -1,4 +1,4 @@
-# Barbería PP2 — Sistema de gestión de turnos
+# Reservably — Sistema de gestión de turnos
 
 Aplicación web para administrar los servicios, el equipo y los turnos de una barbería. Centraliza la información en una base PostgreSQL remota de Supabase y ofrece una interfaz de consulta pública, gestión web de usuarios y una API REST para las operaciones del MVP.
 
