@@ -38,6 +38,19 @@ export default function ServiciosAdmin() {
           </div>
         ))}
       </div>
+      <div className="mt-6 flex justify-between">
+        <Button variant="ghost" size="sm" disabled={page === 0} onClick={() => setPage((current) => current - 1)}>
+          Anterior
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={(data?.data.length ?? 0) < 20}
+          onClick={() => setPage((current) => current + 1)}
+        >
+          Siguiente
+        </Button>
+      </div>
     </div>
   )
 }

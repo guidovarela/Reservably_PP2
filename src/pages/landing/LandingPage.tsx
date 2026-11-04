@@ -32,13 +32,14 @@ export default function LandingPage() {
           </div>
           <div className="relative">
             <div className="aspect-square rounded-3xl bg-gradient-to-br from-brand-200 to-brand-400 dark:from-brand-800 dark:to-brand-600 shadow-2xl" />
-            <div className="absolute -bottom-6 -left-6 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-lg flex items-center gap-3">
+            {/* Probar Boton Calendario */}
+            {/* <div className="absolute -bottom-6 -left-6 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-lg flex items-center gap-3">
               <Calendar className="h-8 w-8 text-brand-500" />
               <div>
                 <p className="text-xs text-gray-500">Próximo turno</p>
                 <p className="font-semibold text-sm">Hoy · 15:30</p>
               </div>
-            </div>
+            </div> */}
           </div>
         </div>
       </section>
