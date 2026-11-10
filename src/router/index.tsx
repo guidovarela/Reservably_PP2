@@ -14,6 +14,7 @@ const MisTurnos = lazy(() => import('@/pages/cliente/MisTurnos'))
 const StaffDashboard = lazy(() => import('@/pages/staff/StaffDashboard'))
 const DuenoDashboard = lazy(() => import('@/pages/dueno/DuenoDashboard'))
 const ServiciosAdmin = lazy(() => import('@/pages/dueno/ServiciosAdmin'))
+const StaffAdmin = lazy(() => import('@/pages/dueno/StaffAdmin'))
 
 const Load = () => <div className="min-h-[60vh] flex items-center justify-center"><Spinner size="lg" /></div>
 
@@ -40,11 +41,12 @@ const router = createBrowserRouter([
             children: [{ index: true, element: <Suspense fallback={<Load />}><StaffDashboard /></Suspense> }],
           },
           {
-            path: 'dueno', element: <RoleRoute allow={['dueno', 'admin']} />,
-            children: [
-              { index: true, element: <Suspense fallback={<Load />}><DuenoDashboard /></Suspense> },
-              { path: 'servicios', element: <Suspense fallback={<Load />}><ServiciosAdmin /></Suspense> },
-            ],
+          path: 'dueno', element: <RoleRoute allow={['dueno', 'admin']} />,
+          children: [
+            { index: true, element: <Suspense fallback={<Load />}><DuenoDashboard /></Suspense> },
+            { path: 'servicios', element: <Suspense fallback={<Load />}><ServiciosAdmin /></Suspense> },
+            { path: 'staff', element: <Suspense fallback={<Load />}><StaffAdmin /></Suspense> },
+          ],
           },
         ],
       },
