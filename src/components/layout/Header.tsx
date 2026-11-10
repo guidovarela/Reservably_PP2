@@ -22,14 +22,14 @@ export function Header() {
         </Link>
         <nav className="hidden md:flex items-center gap-1">
           <Link to="/" className="px-4 py-2 rounded-full text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">Inicio</Link>
-          {session && <Link to={panel} className="px-4 py-2 rounded-full text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">Mi panel</Link>}
+          {session && <Link to={panel} className="px-4 py-2 rounded-full text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">Mi Panel</Link>}
         </nav>
         <div className="flex items-center gap-2">
           <ThemeToggle />
           {session ? (
             <>
-              <span className="hidden sm:inline text-sm text-gray-500">{profile?.nombre}</span>
-              <Button variant="ghost" onClick={logout} className="gap-2">
+                <span className="hidden sm:inline text-sm text-gray-500">{profile?.nombre ? profile.nombre.charAt(0).toUpperCase() + profile.nombre.slice(1).toLowerCase() : ''}</span>              
+                <Button variant="ghost" onClick={logout} className="gap-2">
                 <LogOut className="h-4 w-4" />
                 <span className="hidden sm:inline">Salir</span>
               </Button>
@@ -49,7 +49,7 @@ export function Header() {
         <div className="md:hidden border-t border-gray-200 dark:border-gray-800">
           <div className="container mx-auto max-w-6xl px-4 py-3 flex flex-col gap-1">
             <Link to="/" onClick={() => setOpen(false)} className="px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">Inicio</Link>
-            {session && <Link to={panel} onClick={() => setOpen(false)} className="px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">Mi panel</Link>}
+            {session && <Link to={panel} onClick={() => setOpen(false)} className="px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">Mi Panel</Link>}
           </div>
         </div>
       )}
