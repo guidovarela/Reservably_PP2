@@ -3,6 +3,8 @@ import { useToast } from '@/components/ui/Toast'
 import { desactivarServicio, activarServicio, getServiciosAdmin } from '@/services/servicioService'
 import { formatCurrency } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
+import { Link } from 'react-router-dom'
+import { ArrowLeft } from 'lucide-react'
 
 export default function ServiciosAdmin() {
   const { toast } = useToast()
@@ -37,6 +39,13 @@ export default function ServiciosAdmin() {
 
   return (
     <div className="container mx-auto max-w-6xl px-4 py-10">
+      <div className="flex items-center gap-4 mb-6">
+        <Link to="/dueno">
+          <Button variant="ghost" size="sm" className="gap-2">
+            <ArrowLeft className="h-4 w-4" /> Volver al panel
+          </Button>
+        </Link>
+      </div>
       <h1 className="text-3xl font-bold mb-8">Administración de Servicios</h1>
       
       <div className="grid gap-3">
@@ -78,3 +87,4 @@ export default function ServiciosAdmin() {
     </div>
   )
 }
+

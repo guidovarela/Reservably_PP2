@@ -4,10 +4,11 @@ import { Calendar, DollarSign, Package, Users } from 'lucide-react'
 export default function DuenoDashboard() {
   const cards = [
     { to: '/dueno/servicios', icon: Package, label: 'Servicios', desc: 'Precios y duraciones' },
-    { to: '/dueno/servicios', icon: Users, label: 'Equipo', desc: 'Staff y comisiones' },
-    { to: '/dueno/servicios', icon: Calendar, label: 'Agenda', desc: 'Todos los turnos' },
-    { to: '/dueno/servicios', icon: DollarSign, label: 'Reportes', desc: 'Ingresos y comisiones' },
+    { to: '/dueno/staff', icon: Users, label: 'Equipo', desc: 'Staff y comisiones' },
+    { to: '/dueno/agenda', icon: Calendar, label: 'Agenda', desc: 'Todos los turnos' },
+    { to: '/dueno/reportes', icon: DollarSign, label: 'Reportes', desc: 'Ingresos y comisiones' },
   ]
+  
   return (
     <div className="container mx-auto max-w-6xl px-4 py-10">
       <h1 className="text-3xl font-bold mb-2">Panel del dueño</h1>

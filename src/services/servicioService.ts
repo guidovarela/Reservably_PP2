@@ -37,3 +37,38 @@ export async function activarServicio(id: string) {
   const { error } = await supabase.from('servicio').update({ activo: true }).eq('id', id)
   if (error) throw error
 }
+
+export async function getStaffMembers() {
+  const { data, error } = await supabase
+    .from('usuario')
+    .select('*')
+    .eq('rol', 'staff')
+    .order('nombre')
+  
+  if (error) throw error
+  return data ?? []
+}
+
+export async function desactivarStaff(id: string) {
+  const { error } = await supabase
+    .from('usuario')
+    .update({ 
+      estado: 'INACTIVO', 
+      desactivado_en: new Date().toISOString()
+    })
+    .eq('id', id)
+    
+  if (error) throw error
+}
+
+export async function activarStaff(id: string) {
+  const { error } = await supabase
+    .from('usuario')
+    .update({ 
+      estado: 'ACTIVO', 
+      desactivado_en: null
+    })
+    .eq('id', id)
+    
+  if (error) throw error
+}
