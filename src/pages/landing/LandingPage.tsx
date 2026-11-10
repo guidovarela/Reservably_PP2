@@ -1,7 +1,14 @@
 import { Link } from 'react-router-dom'
-import { ArrowRight, Calendar, Sparkles, Star } from 'lucide-react'
+import { ArrowRight, Sparkles, Star } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { getServiciosLanding } from '@/services/servicioService'
 
 export default function LandingPage() {
+  const { data: servicios = [], isLoading } = useQuery({
+    queryKey: ['servicios-landing'],
+    queryFn: getServiciosLanding,
+  })
+
   return (
     <div>
       <section id="hero-booking" className="relative overflow-hidden">
@@ -32,14 +39,6 @@ export default function LandingPage() {
           </div>
           <div className="relative">
             <div className="aspect-square rounded-3xl bg-gradient-to-br from-brand-200 to-brand-400 dark:from-brand-800 dark:to-brand-600 shadow-2xl" />
-            {/* Probar Boton Calendario */}
-            {/* <div className="absolute -bottom-6 -left-6 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-lg flex items-center gap-3">
-              <Calendar className="h-8 w-8 text-brand-500" />
-              <div>
-                <p className="text-xs text-gray-500">Próximo turno</p>
-                <p className="font-semibold text-sm">Hoy · 15:30</p>
-              </div>
-            </div> */}
           </div>
         </div>
       </section>
@@ -47,24 +46,28 @@ export default function LandingPage() {
       <section id="servicios-lista" className="container mx-auto max-w-6xl px-4 py-16">
         <h2 className="text-3xl font-bold mb-2">Servicios populares</h2>
         <p className="text-gray-500 mb-8">Elegí lo que necesitás y reservá</p>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            { n: 'Corte clásico', p: 8000, d: '30 min', c: 'Barbería' },
-            { n: 'Corte + barba', p: 12000, d: '45 min', c: 'Barbería' },
-            { n: 'Uñas esculpidas', p: 15000, d: '90 min', c: 'Uñas' },
-            { n: 'Maquillaje social', p: 18000, d: '60 min', c: 'Maquillaje' },
-          ].map((s) => (
-            <div key={s.n} className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 hover:shadow-md transition-shadow">
-              <div className="aspect-video rounded-xl bg-gray-100 dark:bg-gray-800 mb-4" />
-              <p className="text-xs uppercase tracking-wide text-brand-500 font-semibold">{s.c}</p>
-              <h3 className="mt-1 font-semibold">{s.n}</h3>
-              <div className="mt-2 flex justify-between items-center text-sm">
-                <span className="text-gray-500">{s.d}</span>
-                <span className="font-bold">${s.p.toLocaleString('es-AR')}</span>
+
+        {isLoading ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 animate-pulse h-48" />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {servicios.map((s) => (
+              <div key={s.id} className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 hover:shadow-md transition-shadow">
+                <div className="aspect-video rounded-xl bg-gray-100 dark:bg-gray-800 mb-4" />
+                <p className="text-xs uppercase tracking-wide text-brand-500 font-semibold">{s.categoria || 'Barbería'}</p>
+                <h3 className="mt-1 font-semibold">{s.nombre}</h3>
+                <div className="mt-2 flex justify-between items-center text-sm">
+                  <span className="text-gray-500">{s.duracion_minutos} min</span>
+                  <span className="font-bold">${Number(s.precio).toLocaleString('es-AR')}</span>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   )
