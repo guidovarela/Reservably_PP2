@@ -1,55 +1,79 @@
-import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useToast } from '@/components/ui/Toast'
-import { desactivarServicio, getServicios } from '@/services/servicioService'
+import { desactivarServicio, activarServicio, getServiciosAdmin } from '@/services/servicioService'
 import { formatCurrency } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
-import { NEGOCIO_ID } from '@/lib/supabase'
 
 export default function ServiciosAdmin() {
   const { toast } = useToast()
   const qc = useQueryClient()
-  const [page, setPage] = useState(0)
-  const { data } = useQuery({
-    queryKey: ['servicios-admin', page],
-    queryFn: () => getServicios(NEGOCIO_ID, page, 20),
+
+  const { data: servicios = [], isLoading } = useQuery({
+    queryKey: ['servicios-admin'],
+    queryFn: getServiciosAdmin,
   })
 
-  async function desactivar(id: string) {
-    if (!confirm('¿Desactivar servicio?')) return
+  async function handleToggleEstado(id: string, activoActual: boolean) {
+    const accion = activoActual ? 'desactivar' : 'activar'
+    if (!confirm(`¿Estás seguro de ${accion} este servicio?`)) return
+    
     try {
-      await desactivarServicio(id)
-      toast('Servicio desactivado', 'success')
+      if (activoActual) {
+        await desactivarServicio(id)
+        toast('Servicio desactivado', 'success')
+      } else {
+        await activarServicio(id)
+        toast('Servicio activado', 'success')
+      }
       qc.invalidateQueries({ queryKey: ['servicios-admin'] })
-    } catch (e: any) { toast(e.message, 'error') }
+    } catch (e: any) { 
+      toast(e.message, 'error') 
+    }
+  }
+
+  if (isLoading) {
+    return <div className="container mx-auto max-w-6xl px-4 py-10">Cargando servicios...</div>
   }
 
   return (
     <div className="container mx-auto max-w-6xl px-4 py-10">
-      <h1 className="text-3xl font-bold mb-8">Servicios</h1>
+      <h1 className="text-3xl font-bold mb-8">Administración de Servicios</h1>
+      
       <div className="grid gap-3">
-        {(data?.data ?? []).map((s) => (
-          <div key={s.id} className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 flex justify-between items-center">
-            <div>
-              <p className="font-semibold">{s.nombre}</p>
-              <p className="text-sm text-gray-500">{s.duracion_minutos} min · {formatCurrency(s.precio)}</p>
+        {servicios.length === 0 ? (
+          <p className="text-gray-500">No hay servicios registrados.</p>
+        ) : (
+          servicios.map((s) => (
+            <div 
+              key={s.id} 
+              className={`rounded-2xl border p-4 flex justify-between items-center transition-colors ${
+                s.activo 
+                  ? 'border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900' 
+                  : 'border-red-200 dark:border-red-900/50 bg-red-50/50 dark:bg-red-950/20 opacity-75'
+              }`}
+            >
+              <div>
+                <div className="flex items-center gap-2">
+                  <p className="font-semibold">{s.nombre}</p>
+                  {!s.activo && (
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 font-medium">
+                      Inactivo
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-gray-500">{s.duracion_minutos} min · {formatCurrency(s.precio)}</p>
+              </div>
+
+              <Button 
+                variant={s.activo ? "ghost" : "outline"} 
+                size="sm" 
+                onClick={() => handleToggleEstado(s.id, s.activo)}
+              >
+                {s.activo ? 'Desactivar' : 'Activar'}
+              </Button>
             </div>
-            <Button variant="ghost" size="sm" onClick={() => desactivar(s.id)}>Desactivar</Button>
-          </div>
-        ))}
-      </div>
-      <div className="mt-6 flex justify-between">
-        <Button variant="ghost" size="sm" disabled={page === 0} onClick={() => setPage((current) => current - 1)}>
-          Anterior
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled={(data?.data.length ?? 0) < 20}
-          onClick={() => setPage((current) => current + 1)}
-        >
-          Siguiente
-        </Button>
+          ))
+        )}
       </div>
     </div>
   )
