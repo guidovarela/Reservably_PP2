@@ -19,6 +19,17 @@ export interface Usuario {
   updated_at: string
 }
 
+export interface SignUpInput {
+  email: string
+  password: string
+  nombre: string
+  apellido?: string | null
+  telefono?: string | null
+  fecha_nacimiento?: string | null
+  preferencias?: string | null
+  foto_url?: string | null
+}
+
 export interface Negocio {
   id: string
   id_dueno: string

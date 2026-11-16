@@ -1,7 +1,12 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
-import type { Usuario } from '@/types/database'
+import type { SignUpInput, Usuario } from '@/types/database'
+
+interface SignUpResult {
+  error: string | null
+  requiresEmailConfirmation?: boolean
+}
 
 interface Ctx {
   session: Session | null
@@ -9,11 +14,33 @@ interface Ctx {
   profile: Usuario | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
-  signUp: (email: string, password: string, nombre: string, apellido?: string) => Promise<{ error: string | null }>
+  signUp: (input: SignUpInput) => Promise<SignUpResult>
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
 }
 const AuthContext = createContext<Ctx | undefined>(undefined)
+
+function normalizeOptional(value?: string | null): string | null {
+  const trimmed = value?.trim()
+  return trimmed ? trimmed : null
+}
+
+function mapSignUpError(message: string): string {
+  const lower = message.toLowerCase()
+  if (lower.includes('already registered') || lower.includes('already been registered')) {
+    return 'Ya existe una cuenta registrada con ese email.'
+  }
+  if (lower.includes('password') && lower.includes('at least')) {
+    return 'La contraseña debe tener al menos 6 caracteres.'
+  }
+  if (lower.includes('invalid email') || lower.includes('unable to validate email')) {
+    return 'Ingresá un email válido.'
+  }
+  if (lower.includes('database error saving new user')) {
+    return 'No se pudo registrar el perfil de usuario. Verificá los datos e intentá nuevamente.'
+  }
+  return message
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
@@ -21,10 +48,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Usuario | null>(null)
   const [loading, setLoading] = useState(true)
 
-  async function loadProfile(userId: string) {
+  async function loadProfile(userId: string): Promise<Usuario | null> {
     const { data, error } = await supabase.from('usuario').select('*').eq('id', userId).single()
-    if (error) { console.error('[auth]', error); setProfile(null); return }
-    setProfile(data as Usuario)
+    if (error) { console.error('[auth]', error); setProfile(null); return null }
+    const loaded = data as Usuario
+    setProfile(loaded)
+    return loaded
   }
 
   async function refreshProfile() { if (user) await loadProfile(user.id) }
@@ -51,12 +80,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error?.message ?? null }
   }
 
-  async function signUp(email: string, password: string, nombre: string, apellido?: string) {
-    const { error } = await supabase.auth.signUp({
-      email, password,
-      options: { data: { nombre, apellido: apellido ?? '' } },
+  async function signUp(input: SignUpInput): Promise<SignUpResult> {
+    const { data, error } = await supabase.auth.signUp({
+      email: input.email.trim().toLowerCase(),
+      password: input.password,
+      options: {
+        data: {
+          nombre: input.nombre.trim(),
+          apellido: normalizeOptional(input.apellido),
+          telefono: normalizeOptional(input.telefono),
+          fecha_nacimiento: normalizeOptional(input.fecha_nacimiento),
+          preferencias: normalizeOptional(input.preferencias),
+          foto_url: normalizeOptional(input.foto_url),
+          rol: 'cliente',
+          estado: 'ACTIVO',
+        },
+      },
     })
-    return { error: error?.message ?? null }
+    if (error) return { error: mapSignUpError(error.message) }
+
+    if (data.session && data.user) {
+      setSession(data.session)
+      setUser(data.user)
+      await loadProfile(data.user.id)
+      return { error: null, requiresEmailConfirmation: false }
+    }
+
+    return { error: null, requiresEmailConfirmation: true }
   }
 
   async function signOut() { await supabase.auth.signOut(); setProfile(null) }
