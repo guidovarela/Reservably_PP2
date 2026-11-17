@@ -15,6 +15,7 @@ const StaffDashboard = lazy(() => import('@/pages/staff/StaffDashboard'))
 const DuenoDashboard = lazy(() => import('@/pages/dueno/DuenoDashboard'))
 const ServiciosAdmin = lazy(() => import('@/pages/dueno/ServiciosAdmin'))
 const StaffAdmin = lazy(() => import('@/pages/dueno/StaffAdmin'))
+const AgendaAdmin = lazy(() => import('@/pages/dueno/AgendaAdmin'))
 
 const Load = () => <div className="min-h-[60vh] flex items-center justify-center"><Spinner size="lg" /></div>
 
@@ -41,12 +42,14 @@ const router = createBrowserRouter([
             children: [{ index: true, element: <Suspense fallback={<Load />}><StaffDashboard /></Suspense> }],
           },
           {
-          path: 'dueno', element: <RoleRoute allow={['dueno', 'admin']} />,
-          children: [
-            { index: true, element: <Suspense fallback={<Load />}><DuenoDashboard /></Suspense> },
-            { path: 'servicios', element: <Suspense fallback={<Load />}><ServiciosAdmin /></Suspense> },
-            { path: 'staff', element: <Suspense fallback={<Load />}><StaffAdmin /></Suspense> },
-          ],
+            path: 'dueno', element: <RoleRoute allow={['dueno', 'admin']} />,
+            children: [
+              { index: true, element: <Suspense fallback={<Load />}><DuenoDashboard /></Suspense> },
+              { path: 'servicios', element: <Suspense fallback={<Load />}><ServiciosAdmin /></Suspense> },
+              { path: 'staff', element: <Suspense fallback={<Load />}><StaffAdmin /></Suspense> },
+              // 2. Agregamos la ruta de la agenda aquí dentro
+              { path: 'agenda', element: <Suspense fallback={<Load />}><AgendaAdmin /></Suspense> },
+            ],
           },
         ],
       },

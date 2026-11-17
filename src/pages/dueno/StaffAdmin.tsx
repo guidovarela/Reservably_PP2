@@ -39,7 +39,6 @@ export default function StaffAdmin() {
 
   return (
     <div className="container mx-auto max-w-6xl px-4 py-10">
-      {/* Botón de retorno al panel principal */}
       <div className="flex items-center gap-4 mb-6">
         <Link to="/dueno">
           <Button variant="ghost" size="sm" className="gap-2">
