@@ -6,7 +6,7 @@ export default function DuenoDashboard() {
     { to: '/dueno/servicios', icon: Package, label: 'Servicios', desc: 'Precios y duraciones' },
     { to: '/dueno/staff', icon: Users, label: 'Equipo', desc: 'Staff y comisiones' },
     { to: '/dueno/agenda', icon: Calendar, label: 'Agenda', desc: 'Todos los turnos' },
-    { to: '/dueno/reportes', icon: DollarSign, label: 'Reportes', desc: 'Ingresos y comisiones' },
+    { to: '/dueno/ingresos', icon: DollarSign, label: 'Ingresos', desc: 'Ingresos y comisiones' },
   ]
   
   return (

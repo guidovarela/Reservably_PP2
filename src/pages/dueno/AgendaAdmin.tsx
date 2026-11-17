@@ -1,59 +1,16 @@
-import { useState } from 'react';
-import { Button } from '@/components/ui/Button';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
-
-interface TurnoMock {
-  id: string;
-  clienteNombre: string;
-  clienteTelefono: string;
-  servicioNombre: string;
-  staffNombre: string;
-  inicio: string;
-  fin: string;
-  estado: 'pendiente' | 'confirmado' | 'completado' | 'cancelado';
-  precio: number;
-}
-
-const TURNOS_MOCK: TurnoMock[] = [
-  {
-    id: '1',
-    clienteNombre: 'Guido Varela',
-    clienteTelefono: '11 2222-3333',
-    servicioNombre: 'Uñas esculpidas',
-    staffNombre: 'Sofía',
-    inicio: '2026-11-18 10:00',
-    fin: '2026-11-18 11:30',
-    estado: 'pendiente',
-    precio: 15000,
-  },
-  {
-    id: '2',
-    clienteNombre: 'Carlos Cortez',
-    clienteTelefono: '123456',
-    servicioNombre: 'Maquillaje social',
-    staffNombre: 'Sofía',
-    inicio: '2026-11-18 14:00',
-    fin: '2026-11-18 15:00',
-    estado: 'confirmado',
-    precio: 18000,
-  },
-  {
-    id: '3',
-    clienteNombre: 'Lucia',
-    clienteTelefono: '1145550001',
-    servicioNombre: 'Corte + barba',
-    staffNombre: 'Sofía',
-    inicio: '2026-11-17 16:00',
-    fin: '2026-11-17 16:45',
-    estado: 'completado',
-    precio: 12000,
-  },
-];
+import { ArrowLeft, Calendar as CalendarIcon, Phone, CheckCircle } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
+import { getTurnosMock, updateTurnoEstadoMock, TurnoMock } from '@/services/turnosMockStore';
 
 export default function AgendaAdmin() {
-  const [turnos, setTurnos] = useState<TurnoMock[]>(TURNOS_MOCK);
+  const [turnos, setTurnos] = useState<TurnoMock[]>([]);
   const [filtroEstado, setFiltroEstado] = useState<string>('todos');
+
+  useEffect(() => {
+    setTurnos(getTurnosMock());
+  }, []);
 
   const turnosFiltrados = turnos.filter(t => {
     if (filtroEstado === 'todos') return true;
@@ -61,9 +18,8 @@ export default function AgendaAdmin() {
   });
 
   const cambiarEstado = (id: string, nuevoEstado: TurnoMock['estado']) => {
-    setTurnos(prev =>
-      prev.map(t => (t.id === id ? { ...t, estado: nuevoEstado } : t))
-    );
+    const actualizados = updateTurnoEstadoMock(id, nuevoEstado);
+    setTurnos([...actualizados]);
   };
 
   const badgeColor = (estado: TurnoMock['estado']) => {
@@ -88,7 +44,9 @@ export default function AgendaAdmin() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
           <h1 className="text-3xl font-bold">Administración de Agenda</h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Gestiona y supervisa las citas del negocio.</p>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
+            Gestiona, filtra y actualiza el estado de las citas del negocio.
+          </p>
         </div>
 
         <div className="flex gap-2 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl text-sm font-medium">
@@ -111,7 +69,7 @@ export default function AgendaAdmin() {
       <div className="grid gap-3">
         {turnosFiltrados.length === 0 ? (
           <div className="text-center py-12 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 text-gray-500">
-            No hay turnos para este estado.
+            No hay turnos registrados para este filtro.
           </div>
         ) : (
           turnosFiltrados.map(turno => (
@@ -119,7 +77,7 @@ export default function AgendaAdmin() {
               key={turno.id}
               className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-colors shadow-xs"
             >
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <div className="flex items-center gap-3">
                   <p className="font-semibold text-lg text-gray-900 dark:text-gray-100">{turno.clienteNombre}</p>
                   <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${badgeColor(turno.estado)}`}>
@@ -129,13 +87,14 @@ export default function AgendaAdmin() {
                 <p className="text-sm text-gray-600 dark:text-gray-300">
                   Servicio: <strong className="text-gray-800 dark:text-gray-200">{turno.servicioNombre}</strong> con <span className="text-blue-600 dark:text-blue-400 font-medium">{turno.staffNombre}</span>
                 </p>
-                <p className="text-xs text-gray-400 dark:text-gray-500">
-                  📅 {turno.inicio}hs &nbsp;|&nbsp; Tel: {turno.clienteTelefono}
-                </p>
+                <div className="flex items-center gap-4 text-xs text-gray-400 dark:text-gray-500 pt-1">
+                  <span className="flex items-center gap-1"><CalendarIcon className="h-3.5 w-3.5" /> {turno.inicio}hs</span>
+                  <span className="flex items-center gap-1"><Phone className="h-3.5 w-3.5" /> {turno.clienteTelefono}</span>
+                </div>
               </div>
 
               <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 pt-3 md:pt-0 border-gray-100 dark:border-gray-800">
-                <span className="text-lg font-bold text-gray-900 dark:text-gray-100">${turno.precio.toLocaleString()}</span>
+                <span className="text-lg font-bold text-gray-900 dark:text-gray-100">${turno.precio.toLocaleString('es-AR')}</span>
                 
                 <div className="flex gap-2">
                   {turno.estado !== 'completado' && (
@@ -143,8 +102,9 @@ export default function AgendaAdmin() {
                       variant="outline"
                       size="sm"
                       onClick={() => cambiarEstado(turno.id, 'completado')}
+                      className="gap-1.5 text-emerald-600 hover:text-emerald-700 border-emerald-200 hover:bg-emerald-50 dark:border-emerald-900/50 dark:hover:bg-emerald-950/30"
                     >
-                      Completar
+                      <CheckCircle className="h-3.5 w-3.5" /> Completar
                     </Button>
                   )}
                   {turno.estado === 'pendiente' && (
@@ -152,6 +112,7 @@ export default function AgendaAdmin() {
                       variant="ghost"
                       size="sm"
                       onClick={() => cambiarEstado(turno.id, 'confirmado')}
+                      className="gap-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/30"
                     >
                       Confirmar
                     </Button>
