@@ -5,6 +5,7 @@ import { useToast } from '@/components/ui/Toast'
 import { cancelarTurno, getTurnosCliente } from '@/services/turnoService'
 import { formatCurrency, formatDate, formatTime } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
+import { Link } from 'react-router-dom'
 
 export default function MisTurnos() {
   const { profile } = useAuth()
@@ -54,7 +55,17 @@ export default function MisTurnos() {
                   <div className="flex items-center gap-3">
                     <span className="font-bold">{formatCurrency(t.precio)}</span>
                     {['pendiente', 'confirmado'].includes(t.estado) && (
-                      <Button variant="ghost" size="sm" onClick={() => handleCancelar(t.id)}>Cancelar</Button>
+                      <>
+                        {new Date(t.inicio).getTime() > Date.now() && (
+                          <Link
+                            to={`/cliente/nuevo-turno?reprogramar=${t.id}`}
+                            className="rounded-full px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                          >
+                            Reprogramar
+                          </Link>
+                        )}
+                        <Button variant="ghost" size="sm" onClick={() => handleCancelar(t.id)}>Cancelar</Button>
+                      </>
                     )}
                   </div>
                 </div>

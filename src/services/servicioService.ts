@@ -1,10 +1,39 @@
 import { supabase } from '@/lib/supabase'
 import type { Servicio } from '@/types/database'
 
-export async function getServiciosAdmin() {
+const BUCKET_IMAGENES = 'assets'
+const EXTENSIONES_IMAGEN: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/gif': 'gif',
+}
+
+export async function subirImagenServicio(file: File, negocioId: string) {
+  const extension = EXTENSIONES_IMAGEN[file.type]
+  if (!extension) throw new Error('La imagen debe ser JPG, PNG, WEBP o GIF.')
+  if (file.size > 5 * 1024 * 1024) throw new Error('La imagen no puede superar los 5 MB.')
+
+  const path = `${negocioId}/servicios/${crypto.randomUUID()}.${extension}`
+  const { error } = await supabase.storage
+    .from(BUCKET_IMAGENES)
+    .upload(path, file, { cacheControl: '3600', contentType: file.type, upsert: false })
+
+  if (error) throw error
+  const { data } = supabase.storage.from(BUCKET_IMAGENES).getPublicUrl(path)
+  return { path, url: data.publicUrl }
+}
+
+export async function eliminarImagenServicio(path: string) {
+  const { error } = await supabase.storage.from(BUCKET_IMAGENES).remove([path])
+  if (error) throw error
+}
+
+export async function getServiciosAdmin(negocioId: string) {
   const { data, error } = await supabase
     .from('servicio')
     .select('*')
+    .eq('id_negocio', negocioId)
     .order('nombre')
   
   if (error) throw error
@@ -18,6 +47,18 @@ export async function getServiciosLanding() {
     .eq('activo', true)
     .order('nombre')
   
+  if (error) throw error
+  return (data ?? []) as Servicio[]
+}
+
+export async function getServiciosParaReserva(negocioId: string) {
+  const { data, error } = await supabase
+    .from('servicio')
+    .select('*')
+    .eq('id_negocio', negocioId)
+    .eq('activo', true)
+    .order('nombre')
+
   if (error) throw error
   return (data ?? []) as Servicio[]
 }
