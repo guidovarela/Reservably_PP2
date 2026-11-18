@@ -25,7 +25,11 @@ export default function MisTurnos() {
     try {
       await cancelarTurno(id)
       toast('Turno cancelado', 'success')
-      qc.invalidateQueries({ queryKey: ['mis-turnos'] })
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ['mis-turnos'] }),
+        qc.invalidateQueries({ queryKey: ['turnos-cliente'] }),
+        qc.invalidateQueries({ queryKey: ['disponibilidad-turno'] }),
+      ])
     } catch (e: any) { toast(e.message, 'error') }
   }
 
@@ -35,8 +39,20 @@ export default function MisTurnos() {
 
   return (
     <div className="container mx-auto max-w-6xl px-4 py-10">
-      <h1 className="text-3xl font-bold mb-2">Mis turnos</h1>
-      <p className="text-gray-500 mb-8">Historial completo</p>
+      <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4 mb-8">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Mis turnos</h1>
+          <p className="text-gray-500">Historial completo de tus reservas</p>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <Link to="/cliente" className="inline-flex items-center justify-center rounded-full border border-gray-300 dark:border-gray-700 px-5 py-2.5 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800">
+            ← Volver al panel
+          </Link>
+          <Link to="/cliente/nuevo-turno" className="inline-flex items-center justify-center rounded-full bg-brand-500 text-white px-5 py-2.5 text-sm font-medium hover:bg-brand-600">
+            Reservar turno
+          </Link>
+        </div>
+      </div>
 
       {isLoading ? <p className="text-gray-500">Cargando...</p>
       : turnos.length === 0 ? (
@@ -49,12 +65,19 @@ export default function MisTurnos() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
                     <p className="text-xs uppercase font-semibold text-brand-500">{t.estado}</p>
-                    <p className="font-semibold">{t.servicio?.nombre}</p>
-                    <p className="text-sm text-gray-500">{formatDate(t.inicio)} · {formatTime(t.inicio)}</p>
+                    <p className="font-semibold">{t.servicio?.nombre ?? 'Servicio'}</p>
+                    {t.staff && (
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        Profesional: {t.staff.nombre} {t.staff.apellido ?? ''}
+                      </p>
+                    )}
+                    <p className="text-sm text-gray-500">
+                      {formatDate(t.inicio)} · {formatTime(t.inicio)}{t.fin ? ` – ${formatTime(t.fin)}` : ''}
+                    </p>
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="font-bold">{formatCurrency(t.precio)}</span>
-                    {['pendiente', 'confirmado'].includes(t.estado) && (
+                    {['pendiente', 'confirmado', 'pago_pendiente'].includes(t.estado) && (
                       <>
                         {new Date(t.inicio).getTime() > Date.now() && (
                           <Link

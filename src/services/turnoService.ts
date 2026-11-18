@@ -2,12 +2,53 @@ import { supabase } from '@/lib/supabase'
 import type { Turno } from '@/types/database'
 
 export interface NuevoTurnoInput {
-  id_negocio: string; id_cliente: string; id_staff: string; id_servicio: string; inicio: string; notas?: string
+  id_negocio?: string
+  id_cliente: string
+  id_staff: string
+  id_servicio: string
+  inicio: string
+  fin?: string
+  duracion_minutos?: number
+  precio?: number
+  notas?: string
 }
 
 export async function crearTurno(input: NuevoTurnoInput) {
+  let idNegocio = input.id_negocio?.trim() || ''
+  let duracionMinutos = input.duracion_minutos
+  let precio = input.precio
+
+  if (!idNegocio || !duracionMinutos || precio === undefined) {
+    const { data: srv, error: srvError } = await supabase
+      .from('servicio')
+      .select('id_negocio, duracion_minutos, precio')
+      .eq('id', input.id_servicio)
+      .single()
+    if (srvError) throw srvError
+    if (!idNegocio) idNegocio = srv.id_negocio
+    if (!duracionMinutos) duracionMinutos = srv.duracion_minutos
+    if (precio === undefined) precio = Number(srv.precio)
+  }
+
+  const inicioMs = new Date(input.inicio).getTime()
+  const fin = input.fin ?? new Date(inicioMs + duracionMinutos! * 60_000).toISOString()
+
   const { data, error } = await supabase
-    .from('turno').insert({ ...input, estado: 'pendiente' }).select().single()
+    .from('turno')
+    .insert({
+      id_negocio: idNegocio,
+      id_cliente: input.id_cliente,
+      id_staff: input.id_staff,
+      id_servicio: input.id_servicio,
+      inicio: input.inicio,
+      fin,
+      precio: Number(precio),
+      estado: 'pendiente',
+      estado_pago: 'pendiente',
+      notas: input.notas?.trim() || null,
+    })
+    .select()
+    .single()
   if (error) throw error
   return data as Turno
 }
@@ -23,12 +64,14 @@ export async function getHorariosDisponibles(
   fecha: string,
   duracionMinutos: number,
   turnoIgnoradoId?: string,
+  negocioId?: string,
 ) {
   const [year, month, day] = fecha.split('-').map(Number)
   const fechaLocal = new Date(year, month - 1, day)
   const inicioDia = new Date(year, month - 1, day)
   const finDia = new Date(year, month - 1, day + 1)
-  const diaSemana = fechaLocal.getDay() || 7
+  const jsDay = fechaLocal.getDay()
+  const diaSemana = jsDay || 7
 
   let consultaTurnosStaff = supabase
     .from('turno')
@@ -50,12 +93,12 @@ export async function getHorariosDisponibles(
     consultaTurnosCliente = consultaTurnosCliente.neq('id', turnoIgnoradoId)
   }
 
-  const [{ data: horarios, error: horarioError }, { data: turnosStaff, error: staffError }, { data: turnosCliente, error: clienteError }] = await Promise.all([
+  const [{ data: todosHorariosStaff, error: horarioError }, { data: turnosStaff, error: staffError }, { data: turnosCliente, error: clienteError }] = await Promise.all([
     supabase
       .from('horario_staff')
-      .select('hora_inicio, hora_fin')
+      .select('hora_inicio, hora_fin, dia_semana')
       .eq('id_usuario', staffId)
-      .eq('dia_semana', diaSemana),
+      .eq('activo', true),
     consultaTurnosStaff,
     consultaTurnosCliente,
   ])
@@ -64,11 +107,42 @@ export async function getHorariosDisponibles(
   if (staffError) throw staffError
   if (clienteError) throw clienteError
 
+  let franjas: Array<{ hora_inicio: string; hora_fin: string }> = []
+
+  if ((todosHorariosStaff ?? []).length > 0) {
+    franjas = (todosHorariosStaff ?? []).filter(
+      (h) => h.dia_semana === diaSemana || (jsDay === 0 && h.dia_semana === 0),
+    )
+  } else {
+    // Fallback cuando el staff no tiene filas en horario_staff (sin depender de 03-promote-users.sql)
+    let negQuery = supabase
+      .from('negocio')
+      .select('hora_apertura, hora_cierre, dias_laborables')
+      .eq('activo', true)
+
+    if (negocioId && negocioId.trim()) {
+      negQuery = negQuery.eq('id', negocioId)
+    }
+
+    const { data: neg } = await negQuery.limit(1).maybeSingle()
+    const diasLaborables: number[] = Array.isArray(neg?.dias_laborables) && neg.dias_laborables.length > 0
+      ? neg.dias_laborables
+      : [1, 2, 3, 4, 5, 6]
+
+    const esLaborable = diasLaborables.includes(diaSemana) || diasLaborables.includes(jsDay)
+    if (esLaborable) {
+      franjas = [{
+        hora_inicio: neg?.hora_apertura || '09:00',
+        hora_fin: neg?.hora_cierre || '18:00',
+      }]
+    }
+  }
+
   const ocupados = [...(turnosStaff ?? []), ...(turnosCliente ?? [])]
   const ahora = Date.now()
   const disponibles = new Set<string>()
 
-  for (const horario of horarios ?? []) {
+  for (const horario of franjas) {
     const apertura = minutesFromTime(horario.hora_inicio)
     const cierre = minutesFromTime(horario.hora_fin)
     const primerSlot = Math.ceil(apertura / 30) * 30
@@ -104,10 +178,20 @@ export async function getTurnoParaReprogramar(id: string, clienteId: string) {
   return data as Pick<Turno, 'id' | 'id_negocio' | 'id_cliente' | 'id_staff' | 'id_servicio' | 'inicio' | 'estado' | 'notas'>
 }
 
-export async function reprogramarTurno(id: string, clienteId: string, inicio: string) {
+export async function reprogramarTurno(
+  id: string,
+  clienteId: string,
+  inicio: string,
+  duracionMinutos?: number,
+) {
+  const payload: { inicio: string; fin?: string } = { inicio }
+  if (duracionMinutos && duracionMinutos > 0) {
+    payload.fin = new Date(new Date(inicio).getTime() + duracionMinutos * 60_000).toISOString()
+  }
+
   const { data, error } = await supabase
     .from('turno')
-    .update({ inicio })
+    .update(payload)
     .eq('id', id)
     .eq('id_cliente', clienteId)
     .in('estado', ['pendiente', 'confirmado'])
@@ -131,7 +215,10 @@ export async function getTurnosCliente(clienteId: string, page = 0, perPage = 10
 }
 
 export async function cancelarTurno(id: string) {
-  const { error } = await supabase.from('turno').update({ estado: 'cancelado' }).eq('id', id)
+  const { error } = await supabase
+    .from('turno')
+    .update({ estado: 'cancelado', cancelado_en: new Date().toISOString() })
+    .eq('id', id)
   if (error) throw error
 }
 

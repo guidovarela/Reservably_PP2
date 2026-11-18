@@ -29,12 +29,16 @@ export async function eliminarImagenServicio(path: string) {
   if (error) throw error
 }
 
-export async function getServiciosAdmin(negocioId: string) {
-  const { data, error } = await supabase
+export async function getServiciosAdmin(negocioId?: string | unknown) {
+  let query = supabase
     .from('servicio')
     .select('*')
-    .eq('id_negocio', negocioId)
-    .order('nombre')
+
+  if (typeof negocioId === 'string' && negocioId.trim()) {
+    query = query.eq('id_negocio', negocioId)
+  }
+
+  const { data, error } = await query.order('nombre')
   
   if (error) throw error
   return (data ?? []) as Servicio[]
@@ -51,13 +55,17 @@ export async function getServiciosLanding() {
   return (data ?? []) as Servicio[]
 }
 
-export async function getServiciosParaReserva(negocioId: string) {
-  const { data, error } = await supabase
+export async function getServiciosParaReserva(negocioId?: string) {
+  let query = supabase
     .from('servicio')
     .select('*')
-    .eq('id_negocio', negocioId)
     .eq('activo', true)
-    .order('nombre')
+
+  if (negocioId && negocioId.trim()) {
+    query = query.eq('id_negocio', negocioId)
+  }
+
+  const { data, error } = await query.order('nombre')
 
   if (error) throw error
   return (data ?? []) as Servicio[]
