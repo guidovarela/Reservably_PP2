@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/components/ui/Toast'
+<<<<<<< HEAD
 import { getServiciosParaReserva } from '@/services/servicioService'
 import { getStaffParaServicio } from '@/services/staffService'
 import { crearTurno, getHorariosDisponibles, getTurnoParaReprogramar, reprogramarTurno } from '@/services/turnoService'
@@ -10,6 +11,13 @@ import { formatCurrency } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { NEGOCIO_ID } from '@/lib/supabase'
+=======
+import { getServiciosAdmin } from '@/services/servicioService'
+import { getStaffMembers } from '@/services/servicioService'
+import { formatCurrency } from '@/lib/utils'
+import { Button } from '@/components/ui/Button'
+import { supabase, NEGOCIO_ID } from '@/lib/supabase'
+>>>>>>> 308d6324a6dc4a624cc930bc85c63233a2b8eff9
 
 function fechaLocalActual() {
   const ahora = new Date()
@@ -41,9 +49,13 @@ function obtenerMensajeError(error: unknown) {
 export default function NuevoTurno() {
   const { profile } = useAuth()
   const { toast } = useToast()
+<<<<<<< HEAD
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const turnoId = searchParams.get('reprogramar')
+=======
+  const useNavigateInstance = useNavigate()
+>>>>>>> 308d6324a6dc4a624cc930bc85c63233a2b8eff9
   const [paso, setPaso] = useState(1)
   const [servicioId, setServicioId] = useState('')
   const [staffId, setStaffId] = useState('')
@@ -52,6 +64,7 @@ export default function NuevoTurno() {
   const [notas, setNotas] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
+<<<<<<< HEAD
   const turnoQuery = useQuery({
     queryKey: ['turno-reprogramar', turnoId, profile?.id],
     queryFn: () => getTurnoParaReprogramar(turnoId!, profile!.id),
@@ -88,6 +101,16 @@ export default function NuevoTurno() {
     queryKey: ['disponibilidad-turno', staffId, profile?.id, fecha, servicio?.duracion_minutos, turnoId],
     queryFn: () => getHorariosDisponibles(staffId, profile!.id, fecha, servicio!.duracion_minutos, turnoId ?? undefined),
     enabled: Boolean(staffId && profile && fecha && servicio),
+=======
+  const { data: servicios = [] } = useQuery({ 
+    queryKey: ['servicios-turno'], 
+    queryFn: getServiciosAdmin 
+  })
+  
+  const { data: staff = [] } = useQuery({ 
+    queryKey: ['staff-turno'], 
+    queryFn: getStaffMembers 
+>>>>>>> 308d6324a6dc4a624cc930bc85c63233a2b8eff9
   })
 
   async function reservar() {
@@ -95,6 +118,7 @@ export default function NuevoTurno() {
     if (turnoId && !puedeReprogramar) return
     setSubmitting(true)
     try {
+<<<<<<< HEAD
       const horariosActualizados = await getHorariosDisponibles(
         staffId,
         profile.id,
@@ -131,6 +155,31 @@ export default function NuevoTurno() {
       toast(obtenerMensajeError(error), 'error')
     } finally {
       setSubmitting(false)
+=======
+      const servicioSeleccionado = servicios.find(s => s.id === servicioId)
+      const staffSeleccionado = staff.find(s => s.id === staffId)
+
+      const { error } = await supabase.from('turno').insert({
+        id_negocio: NEGOCIO_ID, 
+        id_cliente: profile.id, 
+        id_staff: staffId,
+        id_servicio: servicioId, 
+        inicio: new Date(inicio).toISOString(),
+        estado: 'pendiente',
+        precio: servicioSeleccionado?.precio ?? 0,
+        servicioNombre: servicioSeleccionado?.nombre ?? '',
+        staffNombre: staffSeleccionado?.nombre ?? ''
+      })
+
+      if (error) throw error
+
+      toast('¡Turno reservado con éxito!', 'success')
+      useNavigateInstance('/cliente')
+    } catch (e: any) {
+      toast(e.message ?? 'Error al reservar', 'error')
+    } finally { 
+      setSubmitting(false) 
+>>>>>>> 308d6324a6dc4a624cc930bc85c63233a2b8eff9
     }
   }
 
@@ -139,6 +188,7 @@ export default function NuevoTurno() {
       <h1 className="mb-2 text-3xl font-bold">{turnoId ? 'Reprogramar turno' : 'Reservar turno'}</h1>
       <p className="mb-8 text-gray-500">Paso {paso} de 3</p>
 
+<<<<<<< HEAD
       {turnoId && turnoQuery.isLoading && <p className="text-gray-500">Cargando turno...</p>}
       {turnoId && turnoQuery.isError && (
         <p role="alert" className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-700">
@@ -225,10 +275,59 @@ export default function NuevoTurno() {
               ))}
             </div>
           )}
+=======
+      {paso === 1 && (
+        <div id="servicios-lista">
+          <h2 className="font-semibold mb-4">Elegí un servicio</h2>
+          <div className="grid gap-3">
+            {servicios.filter(s => s.activo).map((s) => (
+              <div key={s.id} className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 flex justify-between items-center transition-colors">
+                <div>
+                  <p className="font-semibold">{s.nombre}</p>
+                  <p className="text-sm text-gray-500">{s.duracion_minutos} min · {formatCurrency(s.precio)}</p>
+                </div>
+                <Button 
+                  size="sm" 
+                  onClick={() => { setServicioId(s.id); setPaso(2) }}
+                >
+                  Reservar
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {paso === 2 && (
+        <div>
+          <h2 className="font-semibold mb-4">Elegí un profesional</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {(staff ?? []).map((s: any) => (
+              <div key={s.id} className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-brand-100 dark:bg-brand-900 flex items-center justify-center font-bold text-brand-700 dark:text-brand-300">
+                    {s.nombre?.charAt(0)}
+                  </div>
+                  <div>
+                    <p className="font-semibold">{s.nombre} {s.apellido}</p>
+                    <p className="text-xs text-gray-500 capitalize">{s.rol}</p>
+                  </div>
+                </div>
+                <Button 
+                  size="sm" 
+                  onClick={() => { setStaffId(s.id); setPaso(3) }}
+                >
+                  Seleccionar
+                </Button>
+              </div>
+            ))}
+          </div>
+>>>>>>> 308d6324a6dc4a624cc930bc85c63233a2b8eff9
           <Button variant="ghost" onClick={() => setPaso(1)} className="mt-4">← Volver</Button>
         </section>
       )}
 
+<<<<<<< HEAD
       {NEGOCIO_ID && (!turnoId || (puedeReprogramar && !turnoQuery.isLoading)) && paso === 3 && (
         <section>
           <h2 className="mb-4 font-semibold">Elegí fecha y horario</h2>
@@ -308,6 +407,22 @@ export default function NuevoTurno() {
                 {submitting ? 'Guardando...' : turnoId ? 'Confirmar reprogramación' : 'Confirmar reserva'}
               </Button>
             </div>
+=======
+      {paso === 3 && (
+        <div>
+          <h2 className="font-semibold mb-4">Elegí fecha y hora</h2>
+          <input 
+            type="datetime-local" 
+            value={inicio} 
+            onChange={(e) => setInicio(e.target.value)}
+            className="w-full max-w-sm rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-2.5 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20" 
+          />
+          <div className="mt-6 flex gap-3">
+            <Button variant="ghost" onClick={() => setPaso(2)}>← Volver</Button>
+            <Button onClick={reservar} disabled={!inicio || submitting}>
+              {submitting ? 'Reservando...' : 'Confirmar reserva'}
+            </Button>
+>>>>>>> 308d6324a6dc4a624cc930bc85c63233a2b8eff9
           </div>
         </section>
       )}
