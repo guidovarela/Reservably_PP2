@@ -52,42 +52,43 @@ export async function getStaffParaServicio(negocioId: string | undefined, servic
   if (staffError) throw staffError
 
   const staffIds = new Set((staffServicio ?? []).map((item) => item.id_usuario))
-  const staffActivos = ((staff ?? []) as StaffConUsuario[]).filter(
-    (item) => !item.usuario?.estado || item.usuario.estado === 'ACTIVO',
+  if (staffIds.size === 0) return []
+
+  return ((staff ?? []) as StaffConUsuario[]).filter(
+    (item) => staffIds.has(item.id_usuario) && (!item.usuario?.estado || item.usuario.estado === 'ACTIVO'),
   )
+}
 
-  if (staffIds.size > 0) {
-    const asignadosEnStaff = staffActivos.filter((item) => staffIds.has(item.id_usuario))
-    if (asignadosEnStaff.length > 0) return asignadosEnStaff
-  }
+export async function getAllStaffServicios() {
+  const { data, error } = await supabase
+    .from('staff_servicio')
+    .select('id_usuario, id_servicio')
 
-  if (staffActivos.length > 0) {
-    return staffActivos
-  }
+  if (error) throw error
+  return (data ?? []) as Array<{ id_usuario: string; id_servicio: string }>
+}
 
-  // Fallback: usuarios con rol = 'staff' y estado = 'ACTIVO' (cuando no se ejecutó 03-promote-users.sql)
-  const { data: usuariosStaff, error: usuariosError } = await supabase
-    .from('usuario')
-    .select('id, nombre, apellido, foto_url, email, telefono, estado')
-    .eq('rol', 'staff')
-    .eq('estado', 'ACTIVO')
-    .order('nombre')
+export interface ServicioAsignado {
+  id: string
+  nombre: string
+  categoria: string | null
+  duracion_minutos: number
+  precio: number
+  activo: boolean
+}
 
-  if (usuariosError) throw usuariosError
+export async function getServiciosDeStaff(staffId: string): Promise<ServicioAsignado[]> {
+  const { data, error } = await supabase
+    .from('staff_servicio')
+    .select('servicio:servicio(id, nombre, categoria, duracion_minutos, precio, activo)')
+    .eq('id_usuario', staffId)
 
-  const mapeados: StaffConUsuario[] = (usuariosStaff ?? []).map((u) => ({
-    id_usuario: u.id,
-    id_negocio: negocioId ?? '',
-    activo: true,
-    usuario: u as StaffUsuarioResumen,
-  }))
+  if (error) throw error
 
-  if (staffIds.size > 0) {
-    const asignadosEnUsuario = mapeados.filter((item) => staffIds.has(item.id_usuario))
-    if (asignadosEnUsuario.length > 0) return asignadosEnUsuario
-  }
-
-  return mapeados
+  return (data ?? [])
+    .map((row: any) => row.servicio as ServicioAsignado | null)
+    .filter((s): s is ServicioAsignado => Boolean(s && s.activo))
+    .sort((a, b) => a.nombre.localeCompare(b.nombre))
 }
 
 export async function getStaffAsignadoIds(servicioId: string) {
@@ -100,12 +101,75 @@ export async function getStaffAsignadoIds(servicioId: string) {
   return (data ?? []).map((item) => item.id_usuario)
 }
 
-export async function asignarStaffServicio(staffId: string, servicioId: string) {
+function todayLocalISO(): string {
+  const now = new Date()
+  const y = now.getFullYear()
+  const m = String(now.getMonth() + 1).padStart(2, '0')
+  const d = String(now.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+export async function ensureStaffEnNegocio(staffId: string, negocioId: string) {
+  const { data: existente, error: checkError } = await supabase
+    .from('staff')
+    .select('id_usuario, activo')
+    .eq('id_usuario', staffId)
+    .eq('id_negocio', negocioId)
+    .maybeSingle()
+
+  if (checkError) throw checkError
+  if (existente?.activo) return
+
+  if (existente && !existente.activo) {
+    const { error: updateError } = await supabase
+      .from('staff')
+      .update({ activo: true, desactivado_en: null })
+      .eq('id_usuario', staffId)
+      .eq('id_negocio', negocioId)
+    if (updateError) throw updateError
+    return
+  }
+
+  const { data: neg } = await supabase
+    .from('negocio')
+    .select('comision_default')
+    .eq('id', negocioId)
+    .maybeSingle()
+
+  const { error: insertError } = await supabase
+    .from('staff')
+    .insert({
+      id_usuario: staffId,
+      id_negocio: negocioId,
+      comision_porcentaje: Number(neg?.comision_default ?? 40),
+      contratado_en: todayLocalISO(),
+      activo: true,
+    })
+
+  if (insertError) throw insertError
+}
+
+export async function asignarStaffServicio(staffId: string, servicioId: string, negocioId?: string) {
+  let idNegocio = negocioId?.trim()
+  if (!idNegocio) {
+    const { data: srv, error: srvError } = await supabase
+      .from('servicio')
+      .select('id_negocio')
+      .eq('id', servicioId)
+      .single()
+    if (srvError) throw srvError
+    idNegocio = srv.id_negocio
+  }
+
+  if (idNegocio) {
+    await ensureStaffEnNegocio(staffId, idNegocio)
+  }
+
   const { error } = await supabase
     .from('staff_servicio')
     .insert({ id_usuario: staffId, id_servicio: servicioId })
 
-  if (error) throw error
+  if (error && error.code !== '23505') throw error
 }
 
 export async function desasignarStaffServicio(staffId: string, servicioId: string) {

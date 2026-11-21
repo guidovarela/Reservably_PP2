@@ -99,15 +99,23 @@ export async function getStaffMembers() {
 }
 
 export async function desactivarStaff(id: string) {
+  const ahora = new Date().toISOString()
   const { error } = await supabase
     .from('usuario')
     .update({ 
       estado: 'INACTIVO', 
-      desactivado_en: new Date().toISOString()
+      desactivado_en: ahora
     })
     .eq('id', id)
     
   if (error) throw error
+
+  const { error: staffError } = await supabase
+    .from('staff')
+    .update({ activo: false, desactivado_en: ahora })
+    .eq('id_usuario', id)
+
+  if (staffError) throw staffError
 }
 
 export async function activarStaff(id: string) {
@@ -120,4 +128,11 @@ export async function activarStaff(id: string) {
     .eq('id', id)
     
   if (error) throw error
+
+  const { error: staffError } = await supabase
+    .from('staff')
+    .update({ activo: true, desactivado_en: null })
+    .eq('id_usuario', id)
+
+  if (staffError) throw staffError
 }

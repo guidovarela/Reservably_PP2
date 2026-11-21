@@ -222,12 +222,16 @@ export async function cancelarTurno(id: string) {
   if (error) throw error
 }
 
-export async function getAgendaStaff(staffId: string, desde: string, hasta: string) {
-  const { data, error } = await supabase
+export async function getAgendaStaff(staffId: string, desde?: string, hasta?: string) {
+  let query = supabase
     .from('turno')
     .select(`*, servicio:servicio(id, nombre, duracion_minutos, precio), cliente:usuario!turno_id_cliente_fkey(id, nombre, apellido, telefono)`)
-    .eq('id_staff', staffId).gte('inicio', desde).lte('inicio', hasta)
-    .order('inicio', { ascending: true })
+    .eq('id_staff', staffId)
+
+  if (desde) query = query.gte('inicio', desde)
+  if (hasta) query = query.lte('inicio', hasta)
+
+  const { data, error } = await query.order('inicio', { ascending: false })
   if (error) throw error
   return data ?? []
 }
