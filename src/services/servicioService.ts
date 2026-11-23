@@ -68,7 +68,6 @@ export async function activarServicio(id: string) {
   if (error) throw error
 }
 
-// Trae tanto STAFF como CLIENTE
 export async function getStaffMembers() {
   const { data, error } = await supabase
     .from('usuario')
@@ -80,7 +79,6 @@ export async function getStaffMembers() {
   return data ?? []
 }
 
-// Cambia el rol entre 'staff' y 'cliente'
 export async function cambiarRolUsuario(
   userId: string,
   nuevoRol: 'staff' | 'cliente',
@@ -98,7 +96,6 @@ export async function cambiarRolUsuario(
       await ensureStaffEnNegocio(userId, negocioId)
     }
   } else {
-    // Al bajarlo a cliente, quitamos servicios asignados y desactivamos fila en staff si existe
     await supabase.from('staff_servicio').delete().eq('id_usuario', userId)
     await supabase
       .from('staff')
