@@ -13,7 +13,7 @@ export default function LandingPage() {
     <div>
       <section id="hero-booking" className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-brand-50 via-white to-white dark:from-brand-950/30 dark:via-gray-950 dark:to-gray-950" />
-        <div className="container mx-auto max-w-6xl px-4 py-20 md:py-28 grid md:grid-cols-2 gap-12 items-center relative">
+        <div className="container mx-auto max-w-6xl px-4 py-10 md:py-18 grid md:grid-cols-2 gap-12 items-center relative">
           <div>
             <span className="inline-flex items-center gap-2 rounded-full bg-brand-100 dark:bg-brand-950 text-brand-700 dark:text-brand-300 px-3 py-1 text-sm font-medium">
               <Sparkles className="h-4 w-4" /> Reservá en 30 segundos
@@ -25,12 +25,13 @@ export default function LandingPage() {
               Reservá turnos en barbería y estética sin llamar. Elegí profesional, horario y listo.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link to="/register" className="inline-flex items-center justify-center rounded-full bg-brand-500 text-white px-6 py-3 font-medium hover:bg-brand-600">
+              {/* <Link to="/login" className="inline-flex items-center justify-center rounded-full bg-brand-500 text-white px-6 py-3 font-medium hover:bg-brand-600">
                 Reservar ahora <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-              <Link to="/login" className="inline-flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-6 py-3 font-medium hover:bg-gray-200 dark:hover:bg-gray-700">
+              </Link> */}
+              {/* <Link to="/login" className="inline-flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-6 py-3 font-medium hover:bg-gray-200 dark:hover:bg-gray-700">
                 Ya tengo cuenta
-              </Link>
+              </Link> */}
+              <a href="#servicios-lista" className="inline-flex items-center justify-center rounded-full bg-brand-500 text-white px-6 py-3 font-medium hover:bg-brand-600">Ver servicios disponibles</a>
             </div>
             <div className="mt-8 flex items-center gap-2 text-sm text-gray-500">
               {[...Array(5)].map((_, i) => <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />)}
@@ -38,13 +39,15 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="relative">
-            <div className="aspect-square rounded-3xl bg-gradient-to-br from-brand-200 to-brand-400 dark:from-brand-800 dark:to-brand-600 shadow-2xl" />
+            <div className="aspect-square rounded-3xl shadow-2xl bg-[url(https://yqbevtvgowkblodsctzb.supabase.co/storage/v1/object/public/assets/barber-local.jpg)] bg-cover">
+              {/* <img className="" src="https://yqbevtvgowkblodsctzb.supabase.co/storage/v1/object/public/assets/barber-local.jpg" alt="" /> */}
+              </div>
           </div>
         </div>
       </section>
 
       <section id="servicios-lista" className="container mx-auto max-w-6xl px-4 py-16">
-        <h2 className="text-3xl font-bold mb-2">Servicios populares</h2>
+        <h2 className="text-3xl font-bold mb-2">Servicios activos</h2>
         <p className="text-gray-500 mb-8">Elegí lo que necesitás y reservá</p>
 
         {isLoading ? (

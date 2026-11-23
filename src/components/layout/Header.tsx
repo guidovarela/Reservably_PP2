@@ -17,8 +17,8 @@ export function Header() {
     <header className="sticky top-0 z-40 border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-950/80 backdrop-blur">
       <div className="container mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8 flex h-16 items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-full bg-brand-500" />
-          <span className="font-bold text-lg tracking-tight">El Estilo</span>
+          <div className="h-8 w-8 rounded-full logo" />
+          <span className="font-bold text-lg tracking-tight">El Estilo - Barbería</span>
         </Link>
         <nav className="hidden md:flex items-center gap-1">
           <Link to="/" className="px-4 py-2 rounded-full text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">Inicio</Link>

@@ -5,4 +5,6 @@
 @layer base {
   html { -webkit-font-smoothing: antialiased; scroll-behavior: smooth; }
   body { @apply bg-white text-gray-900 dark:bg-gray-950 dark:text-gray-100 font-sans; }
+  .linkFooter:hover{text-decoration: underline;}
+  .logo{background:url("https://yqbevtvgowkblodsctzb.supabase.co/storage/v1/object/public/assets/barber_trama.jpg");background-size: contain;}
 }
