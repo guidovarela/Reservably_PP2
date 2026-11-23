@@ -114,7 +114,6 @@ export async function getHorariosDisponibles(
       (h) => h.dia_semana === diaSemana || (jsDay === 0 && h.dia_semana === 0),
     )
   } else {
-    // Fallback cuando el staff no tiene filas en horario_staff (sin depender de 03-promote-users.sql)
     let negQuery = supabase
       .from('negocio')
       .select('hora_apertura, hora_cierre, dias_laborables')
@@ -238,5 +237,66 @@ export async function getAgendaStaff(staffId: string, desde?: string, hasta?: st
 
 export async function marcarCompletado(id: string) {
   const { error } = await supabase.from('turno').update({ estado: 'completado' }).eq('id', id)
+  if (error) throw error
+}
+
+export interface TurnoAdminItem {
+  id: string
+  id_negocio: string
+  inicio: string
+  fin: string
+  estado: string
+  precio: number | null
+  notas: string | null
+  cliente: {
+    id: string
+    nombre: string
+    apellido: string | null
+    telefono: string | null
+  } | null
+  staff: {
+    id: string
+    nombre: string
+    apellido: string | null
+  } | null
+  servicio: {
+    id: string
+    nombre: string
+    precio: number | null
+    duracion_minutos: number | null
+  } | null
+}
+
+export async function getTurnosAdmin(negocioId?: string): Promise<TurnoAdminItem[]> {
+  let query = supabase
+    .from('turno')
+    .select(`
+      id,
+      id_negocio,
+      inicio,
+      fin,
+      estado,
+      precio,
+      notas,
+      cliente:usuario!turno_id_cliente_fkey(id, nombre, apellido, telefono),
+      staff:usuario!turno_id_staff_fkey(id, nombre, apellido),
+      servicio:servicio(id, nombre, precio, duracion_minutos)
+    `)
+    .order('inicio', { ascending: false })
+
+  if (negocioId && negocioId.trim()) {
+    query = query.eq('id_negocio', negocioId)
+  }
+
+  const { data, error } = await query
+  if (error) throw error
+  return (data ?? []) as unknown as TurnoAdminItem[]
+}
+
+export async function confirmarTurno(id: string) {
+  const { error } = await supabase
+    .from('turno')
+    .update({ estado: 'confirmado' })
+    .eq('id', id)
   if (error) throw error
 }

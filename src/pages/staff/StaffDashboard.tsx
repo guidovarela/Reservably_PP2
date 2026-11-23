@@ -3,7 +3,12 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Calendar, Phone, RefreshCw } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/components/ui/Toast'
-import { getAgendaStaff, marcarCompletado } from '@/services/turnoService'
+import {
+  getAgendaStaff,
+  confirmarTurno,
+  cancelarTurno,
+  marcarCompletado,
+} from '@/services/turnoService'
 import { getServiciosDeStaff } from '@/services/staffService'
 import { formatCurrency, formatDate, formatTime } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
@@ -51,6 +56,7 @@ export default function StaffDashboard() {
   const { toast } = useToast()
   const qc = useQueryClient()
   const [filtro, setFiltro] = useState<FiltroAgenda>('todos')
+  const [procesandoId, setProcesandoId] = useState<string | null>(null)
 
   const {
     data: turnos = [],
@@ -81,12 +87,46 @@ export default function StaffDashboard() {
     refetchOnWindowFocus: true,
   })
 
+  async function handleConfirmar(id: string) {
+    setProcesandoId(id)
+    try {
+      await confirmarTurno(id)
+      toast('Turno confirmado', 'success')
+      await qc.invalidateQueries({ queryKey: ['agenda-staff'] })
+      await qc.invalidateQueries({ queryKey: ['turnos-admin'] })
+    } catch (e: any) {
+      toast(e.message ?? 'No se pudo confirmar el turno', 'error')
+    } finally {
+      setProcesandoId(null)
+    }
+  }
+
+  async function handleCancelar(id: string) {
+    setProcesandoId(id)
+    try {
+      await cancelarTurno(id)
+      toast('Turno cancelado', 'success')
+      await qc.invalidateQueries({ queryKey: ['agenda-staff'] })
+      await qc.invalidateQueries({ queryKey: ['turnos-admin'] })
+    } catch (e: any) {
+      toast(e.message ?? 'No se pudo cancelar el turno', 'error')
+    } finally {
+      setProcesandoId(null)
+    }
+  }
+
   async function completar(id: string) {
+    setProcesandoId(id)
     try {
       await marcarCompletado(id)
       toast('Turno completado', 'success')
       await qc.invalidateQueries({ queryKey: ['agenda-staff'] })
-    } catch (e: any) { toast(e.message ?? 'No se pudo completar el turno', 'error') }
+      await qc.invalidateQueries({ queryKey: ['turnos-admin'] })
+    } catch (e: any) {
+      toast(e.message ?? 'No se pudo completar el turno', 'error')
+    } finally {
+      setProcesandoId(null)
+    }
   }
 
   const turnosFiltrados = (turnos as any[]).filter((t) => {
@@ -190,40 +230,74 @@ export default function StaffDashboard() {
           </div>
         ) : (
           <div id="agenda-dia" className="grid gap-3">
-            {turnosFiltrados.map((t) => (
-              <div key={t.id} className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase border ${badgeEstado(t.estado)}`}>
-                        {t.estado}
-                      </span>
-                      <span className="inline-flex items-center gap-1 text-sm text-brand-500 font-semibold">
-                        <Calendar className="h-3.5 w-3.5" />
-                        {formatDate(t.inicio)} · {formatTime(t.inicio)} – {formatTime(t.fin)}
-                      </span>
-                    </div>
-                    <p className="font-semibold">{t.servicio?.nombre ?? 'Servicio'}</p>
-                    <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500">
-                      <span>Cliente: {t.cliente?.nombre ?? 'Sin nombre'} {t.cliente?.apellido ?? ''}</span>
-                      {t.cliente?.telefono && (
-                        <span className="inline-flex items-center gap-1 text-xs">
-                          <Phone className="h-3.5 w-3.5" /> {t.cliente.telefono}
+            {turnosFiltrados.map((t) => {
+              const ocupado = procesandoId === t.id
+              const esPendiente = ['pendiente', 'pago_pendiente'].includes(t.estado)
+              const esConfirmado = t.estado === 'confirmado'
+              const puedeCancelar = ['pendiente', 'pago_pendiente', 'confirmado'].includes(t.estado)
+
+              return (
+                <div key={t.id} className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase border ${badgeEstado(t.estado)}`}>
+                          {t.estado}
                         </span>
+                        <span className="inline-flex items-center gap-1 text-sm text-brand-500 font-semibold">
+                          <Calendar className="h-3.5 w-3.5" />
+                          {formatDate(t.inicio)} · {formatTime(t.inicio)} – {formatTime(t.fin)}
+                        </span>
+                      </div>
+                      <p className="font-semibold">{t.servicio?.nombre ?? 'Servicio'}</p>
+                      <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500">
+                        <span>Cliente: {t.cliente?.nombre ?? 'Sin nombre'} {t.cliente?.apellido ?? ''}</span>
+                        {t.cliente?.telefono && (
+                          <span className="inline-flex items-center gap-1 text-xs">
+                            <Phone className="h-3.5 w-3.5" /> {t.cliente.telefono}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {t.precio !== undefined && t.precio !== null && (
+                        <span className="font-bold text-sm mr-1">{formatCurrency(t.precio)}</span>
+                      )}
+                      {puedeCancelar && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={ocupado}
+                          onClick={() => handleCancelar(t.id)}
+                          className="text-rose-600 hover:text-rose-700 border-rose-200 hover:bg-rose-50 dark:border-rose-900/50 dark:hover:bg-rose-950/30"
+                        >
+                          Cancelar
+                        </Button>
+                      )}
+                      {esPendiente && (
+                        <Button
+                          size="sm"
+                          disabled={ocupado}
+                          onClick={() => handleConfirmar(t.id)}
+                        >
+                          Confirmar
+                        </Button>
+                      )}
+                      {esConfirmado && (
+                        <Button
+                          id="btn-completar"
+                          size="sm"
+                          disabled={ocupado}
+                          onClick={() => completar(t.id)}
+                        >
+                          Marcar completado
+                        </Button>
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    {t.precio !== undefined && t.precio !== null && (
-                      <span className="font-bold text-sm">{formatCurrency(t.precio)}</span>
-                    )}
-                    {!['completado', 'cancelado', 'no_show'].includes(t.estado) && (
-                      <Button id="btn-completar" size="sm" onClick={() => completar(t.id)}>Marcar completado</Button>
-                    )}
-                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </section>
