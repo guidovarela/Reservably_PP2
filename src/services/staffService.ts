@@ -109,12 +109,28 @@ function todayLocalISO(): string {
   return `${y}-${m}-${d}`
 }
 
-export async function ensureStaffEnNegocio(staffId: string, negocioId: string) {
+export async function ensureStaffEnNegocio(staffId: string, negocioId?: string) {
+  let targetNegocioId = negocioId?.trim()
+
+  if (!targetNegocioId) {
+    const { data: primerNegocio, error: negError } = await supabase
+      .from('negocio')
+      .select('id, comision_default')
+      .limit(1)
+      .maybeSingle()
+
+    if (negError) throw negError
+    if (!primerNegocio?.id) {
+      throw new Error('No existe ningún registro en la tabla negocio para asociar al staff.')
+    }
+    targetNegocioId = primerNegocio.id
+  }
+
   const { data: existente, error: checkError } = await supabase
     .from('staff')
     .select('id_usuario, activo')
     .eq('id_usuario', staffId)
-    .eq('id_negocio', negocioId)
+    .eq('id_negocio', targetNegocioId)
     .maybeSingle()
 
   if (checkError) throw checkError
@@ -125,7 +141,7 @@ export async function ensureStaffEnNegocio(staffId: string, negocioId: string) {
       .from('staff')
       .update({ activo: true, desactivado_en: null })
       .eq('id_usuario', staffId)
-      .eq('id_negocio', negocioId)
+      .eq('id_negocio', targetNegocioId)
     if (updateError) throw updateError
     return
   }
@@ -133,14 +149,14 @@ export async function ensureStaffEnNegocio(staffId: string, negocioId: string) {
   const { data: neg } = await supabase
     .from('negocio')
     .select('comision_default')
-    .eq('id', negocioId)
+    .eq('id', targetNegocioId)
     .maybeSingle()
 
   const { error: insertError } = await supabase
     .from('staff')
     .insert({
       id_usuario: staffId,
-      id_negocio: negocioId,
+      id_negocio: targetNegocioId,
       comision_porcentaje: Number(neg?.comision_default ?? 40),
       contratado_en: todayLocalISO(),
       activo: true,
